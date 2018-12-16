@@ -1,43 +1,34 @@
 package main
 
 import (
-	"log"
-	"sync"
-	"time"
+	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
+	"os"
 )
 
-func inputLoop() {
-	for i := 0; i < 10; i++ {
-		log.Printf("Retrieving %v", i)
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
-func displayLoop() {
-	for i := 0; i < 10; i++ {
-		log.Printf("Displaying %v", i)
-		time.Sleep(300 * time.Millisecond)
-	}
-}
-
 func main() {
-	// Main wait group
-	var wg sync.WaitGroup
+	// Set console/terminal to raw mode
+	fd := int(os.Stdin.Fd())
+	oldState, err := terminal.MakeRaw(fd)
+	if err != nil {
+		panic(err)
+	}
+	defer terminal.Restore(fd, oldState)
 
-	// Create our input go routine and add to our wait group
-	wg.Add(1)
+	// Get input and send to channel
+	ch := make(chan [1]byte)
 	go func() {
-		inputLoop()
-		wg.Done()
+		var c [1]byte
+		_, err = os.Stdin.Read(c[:])
+		if err != nil {
+			panic(err)
+		}
+		ch <- c
 	}()
-
-	// Create our display go routine and add to wait group
-	wg.Add(1)
-	go func() {
-		displayLoop()
-		wg.Done()
-	}()
-
-	// Wait for all goroutines to finish
-	wg.Wait()
+	out := <-ch
+	if string(out[:]) == "a" {
+		fmt.Print("test 1")
+	} else {
+		fmt.Print("test 2")
+	}
 }
